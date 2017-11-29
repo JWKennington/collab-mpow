@@ -180,7 +180,7 @@ def load_intake_data():
                               sheet_name=SHEET_INTAKE,
                               cell_extractor=intake_extractor,
                               columns=['Patient', 'DayNum', 'Intake'],
-                              num_rows=155, num_cols=28, start=(1, 5))
+                              num_rows=154, num_cols=28, start=(1, 5))
 
 
 def load_scores_data():
@@ -317,6 +317,7 @@ def integrity_intraday_data():
 def setup_hdf():
     '''
     Create an hdf5 file to store the normalized datasets
+    >>> setup_hdf()
     '''
     intraday = intraday_data()
     daily = daily_data()
