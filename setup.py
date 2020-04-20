@@ -18,7 +18,7 @@ URL = 'https://github.com/JWKennington/collab-mpow'
 EMAIL = 'jameswkennington@gmail.com'
 AUTHOR = 'J.W. Kennington'
 REQUIRES_PYTHON = '>=3.6.0'
-VERSION = None
+VERSION = '0.0.1'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
