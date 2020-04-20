@@ -21,4 +21,4 @@ and the normalized data have been saved to `data/data.h5` in HDF5 format.
 Though the regression helper functions are in `mpow/regression.py`, the bulk of the analysis
 is in the Jupyter notebook `analysis.ipynb`. This notebook can be accessed by 
 running `jupyter notebook` in a properly-setup python console, or by clicking the binder link
-[here](https://mybinder.org/v2/gh/JWKennington/collab-mpow/master?filepath=notebooks%2Fmpow-analysis.ipynb). 
+[here](https://mybinder.org/v2/gh/JWKennington/collab-mpow/master?filepath=analysis.ipynb). 

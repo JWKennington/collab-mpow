@@ -18,11 +18,11 @@ URL = 'https://github.com/JWKennington/collab-mpow'
 EMAIL = 'jameswkennington@gmail.com'
 AUTHOR = 'J.W. Kennington'
 REQUIRES_PYTHON = '>=3.6.0'
-VERSION = '0.0.1'
+VERSION = '0.0.2'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    'numpy', 'pandas', 'plotnine', 'bokeh', 'xlrd',
+    'numpy', 'pandas', 'plotnine', 'bokeh', 'xlrd', 'tables',
 ]
 
 # What packages are optional?
