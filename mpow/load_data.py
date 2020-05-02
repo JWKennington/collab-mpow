@@ -24,6 +24,8 @@ import xlrd
 # Excel Color constants
 BG_GREEN = 31
 BG_ORANGE = 29
+BG_ORANGE_2 = 53
+BG_ORANGES = (BG_ORANGE, BG_ORANGE_2)
 BG_RED = 10
 
 
@@ -34,6 +36,7 @@ FILE_XL_SCORES = DATA_DIR / 'retro_pain_scores.xls'
 FILE_XL_DETAIL = DATA_DIR / 'patient features.csv'
 FILE_RETRO = DATA_DIR / 'retro.h5'
 FILE_PROTO = DATA_DIR / 'MPOW-Data-20190206_xls.xls'
+FILE_PROTO_FINAL = DATA_DIR / 'MPOW-Data-20200424_xls.xls'
 FILE_HDF = DATA_DIR / 'data.h5'
 
 
@@ -45,10 +48,11 @@ KEY_DAILY = 'daily'
 KEY_DETAIL = 'detail'
 
 
-Source = collections.namedtuple('Source', 'file page_prefix')
+Source = collections.namedtuple('Source', 'file page_prefix name')
 class Sources:
-    Retrospective = Source(FILE_PROTO.as_posix(), 'RETROSPECTIVE')
-    Protocol = Source(FILE_PROTO.as_posix(), 'PROTOCOL')
+    Retrospective = Source(FILE_PROTO.as_posix(), 'RETROSPECTIVE', 'Retrospective')
+    Protocol = Source(FILE_PROTO.as_posix(), 'PROTOCOL', 'Protocol')
+    ProtocolFinal = Source(FILE_PROTO_FINAL.as_posix(), 'PROTOCOL', 'ProtocolFinal')
 
 
 def cell_bg_color(cell: xlrd.sheet.Cell, wb: xlrd.Book) -> int:
@@ -164,7 +168,7 @@ def pain_score_extractor(row: int, col: int, cell: xlrd.sheet.Cell, wb: xlrd.Boo
     '''
     cell_color = cell_bg_color(cell, wb) 
     if not cell.value == '':
-        return (row, col-15, cell.value, int(cell_color == BG_ORANGE))
+        return (row, col-15, cell.value, int(cell_color in BG_ORANGES))
     elif cell_color == BG_RED: # Red signifies an empty day
         return (row, col-15, numpy.nan, 1)
 
@@ -212,7 +216,7 @@ def load_scores_data(source: Source=Sources.Retrospective):
 
     Returns:
         DataFrame, the retrospective scores data
-        >>> load_scores_data().head()
+        >>> load_scores_data(Sources.ProtocolFinal).head()
            Patient  Ordinal  PainScore  DayStart  DayNum
         0        1        1        9.0         1       1
         1        1        2        2.0         0       1
@@ -220,7 +224,7 @@ def load_scores_data(source: Source=Sources.Retrospective):
         3        1        4        8.0         0       1
         4        1        5        0.0         0       1
 
-        >>> load_scores_data(source=Sources.Protocol).head()
+         load_scores_data(source=Sources.Protocol).head()
            Patient  Ordinal  PainScore  DayStart  DayNum
         0        1        1        0.0         1       1
         1        1        2        0.0         0       1
@@ -261,15 +265,17 @@ def load_detail_data(source: Source=Sources.Retrospective):
     '''
     if source == Sources.Retrospective:
         df = pandas.read_csv(FILE_XL_DETAIL)
-    elif source == Sources.Protocol:
-        df = pandas.read_excel(source.file, sheetname=source.page_prefix + ' ' + 'Data collection')
+    elif source in (Sources.Protocol, Sources.ProtocolFinal):
+        df = pandas.read_excel(source.file, sheet_name=source.page_prefix + ' ' + 'Data collection')
     else:
         raise ValueError('Unknown source: {}'.format(source))
     df = df.rename(columns={'Subject': 'Patient',
                             'Age at Admit': 'AgeAtAdmit',
                             'Impairment Group': 'ImpairmentGroup',
                             'Depression (1=Y, 0=N)': 'Depression'})
-    return df[['Patient', 'AgeAtAdmit', 'Gender', 'ImpairmentGroup', 'Depression'].copy()]
+    df = df[['Patient', 'AgeAtAdmit', 'Gender', 'ImpairmentGroup', 'Depression'].copy()]
+    df['Gender'] = df['Gender'].str.lower()
+    return df
 
 
 def intraday_data(source: Source=Sources.Retrospective):
@@ -394,9 +400,9 @@ def _setup_hdf(source: Source=Sources.Retrospective):
     intraday = intraday_data(source=source)
     daily = daily_data(source=source)
     detail = load_detail_data(source=source)
-    intraday.to_hdf(FILE_HDF.as_posix(), source.page_prefix.lower() + '_' + KEY_INTRADAY, format='table')
-    daily.to_hdf(FILE_HDF.as_posix(), source.page_prefix.lower() + '_' + KEY_DAILY, format='table')
-    detail.to_hdf(FILE_HDF.as_posix(), source.page_prefix.lower() + '_' + KEY_DETAIL, format='table')
+    intraday.to_hdf(FILE_HDF.as_posix(), source.name.lower() + '_' + KEY_INTRADAY, format='table')
+    daily.to_hdf(FILE_HDF.as_posix(), source.name.lower() + '_' + KEY_DAILY, format='table')
+    detail.to_hdf(FILE_HDF.as_posix(), source.name.lower() + '_' + KEY_DETAIL, format='table')
 
 
 def setup_hdf():
@@ -408,6 +414,7 @@ def setup_hdf():
         os.remove(FILE_HDF.as_posix())
     _setup_hdf(source=Sources.Retrospective)
     _setup_hdf(source=Sources.Protocol)
+    _setup_hdf(source=Sources.ProtocolFinal)
 
 
 def norm_detail_data(source: Source=Sources.Retrospective):
@@ -431,7 +438,7 @@ def norm_detail_data(source: Source=Sources.Retrospective):
         ImpairmentGroup  Debility
         Depression              1
     '''
-    return pandas.read_hdf(FILE_HDF, source.page_prefix.lower() + '_' + KEY_DETAIL)
+    return pandas.read_hdf(FILE_HDF, source.name.lower() + '_' + KEY_DETAIL)
 
 
 def norm_daily_data(source: Source=Sources.Retrospective):
@@ -463,7 +470,7 @@ def norm_daily_data(source: Source=Sources.Retrospective):
         ImpairmentGroup  Debility
         Depression              1
     '''
-    return pandas.read_hdf(FILE_HDF, source.page_prefix.lower() + '_' + KEY_DAILY)
+    return pandas.read_hdf(FILE_HDF, source.name.lower() + '_' + KEY_DAILY)
 
 
 def norm_intraday_data(source: Source=Sources.Retrospective):
@@ -497,4 +504,4 @@ def norm_intraday_data(source: Source=Sources.Retrospective):
         ImpairmentGroup  Debility
         Depression              1
     '''
-    return pandas.read_hdf(FILE_HDF, source.page_prefix.lower() + '_' + KEY_INTRADAY)
+    return pandas.read_hdf(FILE_HDF, source.name.lower() + '_' + KEY_INTRADAY)
